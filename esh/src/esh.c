@@ -9,9 +9,20 @@ void esh_loop(void) {
     char **args;
     int status;
 
-    do {
+    const char *user = getenv("USER");  //todo bu kodu user değişkeninden bağımsız hale getir
+    
+    if (user == NULL) {
+        fprintf(stderr, "user name error\n");
+        exit(EXIT_FAILURE);
+    }
 
-        printf(" ? ");
+    /*todo asdasd
+    deneme hoca amk
+    
+    asdasd*/
+
+    do {
+        printf("[%s@]? ",user);  //todo after @ add computer name + working directory
         line = esh_read_line();
         args = esh_split_line(line);
         status = esh_execute(args);
