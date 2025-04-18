@@ -10,7 +10,8 @@ void esh_loop(void) {
     int status;
 
     do {
-        printf(" $ ");
+
+        printf(" ? ");
         line = esh_read_line();
         args = esh_split_line(line);
         status = esh_execute(args);
@@ -59,10 +60,8 @@ char *esh_read_line(void) {
 }
 
 char **esh_split_line(char *line) {
-    int bufsiz = 64, position = 0;  // here bufsiz is token num in one line.
+    int bufsiz = 64, position = 0;
     char *token, **tokens = malloc(bufsiz * sizeof(char*));
-    // positionda token sırası burda.
-  
 
     if (!tokens) {
         fprintf(stderr, "esh: token buffer allocation error\n");
@@ -73,36 +72,23 @@ char **esh_split_line(char *line) {
     while (token != NULL) {
         tokens[position] = token;
         position++;
-    
-        if (position >= bufsiz) {
-          bufsiz += 64;
-          tokens = realloc(tokens, bufsiz * sizeof(char*));
-          if (!tokens) {
-            fprintf(stderr, "esh: allocation error\n");
-            exit(EXIT_FAILURE);
-          }
-        }
-    
-        token = strtok(NULL, " \n\t\r\a");
-        while(token != NULL) {
-            tokens[position] = token;
-            position++;
-            if (position >= bufsiz) {
-                bufsiz += bufsiz;
-                tokens = realloc(tokens, bufsiz * sizeof(char*));
-                if (!tokens) {
-                    fprintf(stderr, "esh: token buffer allocation error\n");
-                    exit(EXIT_FAILURE);
-                }
-            }
-            token = strtok(NULL, " \n\t\r\a");
-            // strtok kullanımı böyle ilk çağrıda cümle ikinci çağrıda null verilir devam eder.
-        }
-        tokens[position] = NULL;
-        return tokens;
 
+        if (position >= bufsiz) {
+            bufsiz += bufsiz;
+            tokens = realloc(tokens, bufsiz * sizeof(char*));
+            if (!tokens) {
+                fprintf(stderr, "esh: allocation error\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        token = strtok(NULL, " \t\r\n\a");
     }
+
+    tokens[position] = NULL; 
+    return tokens;
 }
+
 
 
 // starts the process
@@ -115,13 +101,13 @@ int esh_launch(char **args) {
     if (pid == 0) {
         // child process
         if (execvp(args[0], args) == -1) {
-            perror("esh: execvp error");
+            perror("esh");
         }
         exit(EXIT_FAILURE);
     } 
     
     else if (pid < 0) {
-        perror("esh: fork process error");
+        perror("esh");
     }
 
     // parent process in cocuk process beklemesiyle ilgili bir kod.
@@ -140,32 +126,111 @@ int esh_launch(char **args) {
 char *builtin_str[] = {
     "cd",
     "help",
-    "exit"
+    "exit",
+    "builtins"
+};
+
+char *builtin_help[] = {
+    "cd - takes 1 argument and it is the path you can use '.', '..', '~', ''(i mean no second arg)",
+    "help - help or help <builtin> only 1 argument",
+    "exit - closes the shell",
+    "builtins - shows all the builtins"
 };
   
 int esh_cd(char **args) {
-    if (args[1] == NULL) {
-        fprintf(stderr, "esh: expected argument to \"cd\"\n");
-    } 
-    else {
-        if (chdir(args[1]) != 0) {
-            perror("lsh");
-        }
+    const char *target_dir = ".";  // varsayılan olarak current directory
+
+    int arg_count = 0;
+    while (args[arg_count] != NULL) {
+        arg_count++;
     }
-      return 1;
+    if (arg_count > 2) {
+        fprintf(stderr, "esh: too many arguments\n");
+        return 1;
+    }
+
+
+    if (args[1] == NULL) {
+        target_dir = "."; // cd yalnızca yazılmışsa mevcut dizinde kal
+    } 
+    else if (strcmp(args[1], "~") == 0) {
+        char *home = getenv("HOME");
+        if (home == NULL) {
+            fprintf(stderr, "esh: HOME environment variable not set.\n");
+            return 1;
+        }
+        target_dir = home;
+    }
+    else {
+        target_dir = args[1]; // normal cd path
+    }
+
+    if (chdir(target_dir) != 0) {
+        perror("esh");
+    }
+
+    return 1;
 }
 
 int esh_help(char **args) {
-    int i;
-    printf("ege's shell - esh\n");
-    printf("built ins: \n");
-  
-    for (i = 0; i < builtin_num(); i++) {
-      printf("  %s\n", builtin_str[i]);
+
+    int arg_count = 0;
+    while (args[arg_count] != NULL) {
+        arg_count++;
+    }
+
+    if (arg_count == 1) {
+        int i;
+        printf("ege's shell - esh\n");
+        printf("a basic shell implementation in c by ege cagan kantar");
+        
+        printf("manual for builtins: help 'builtin'\n");
+        printf("help for other functions: man 'function'\n");
+        printf("show built ins: <builtins>\n");
+
+    } else if (arg_count == 2) {
+        char *funcname = args[1];
+        int found = 0;
+
+        for (int i = 0; i < builtin_num(); i++) {
+            if (strcmp(funcname, builtin_str[i]) == 0) {
+                printf("%s\n", builtin_help[i]);
+                found = 1;
+                break;
+            }
+        }
+
+        if (!found) {
+            fprintf(stderr, "esh: no help available for '%s'\n", funcname);
+            printf("try man <command>\n");
+        }
+    } else {
+        fprintf(stderr, "esh: too many arguments\n");
+        return 1;
     }
   
     return 1;
 }
+
+int esh_builtins(char **args) {
+    int arg_count = 0;
+    while (args[arg_count] != NULL) {
+        arg_count++;
+    }
+
+    if (arg_count > 1 || strcmp(args[0], "builtins") != 0) {
+        fprintf(stderr, "esh: wrong usage of command\n");
+        printf("correct usage: builtins\n");
+        return 1;
+    }
+
+    printf("built-in's:\n");
+    for (int i = 0; i < builtin_num(); i++) {
+        printf(" - %s\n", builtin_str[i]);
+    }
+    return 1;
+}
+
 
 int esh_exit(char **args) {
     return 0;
@@ -175,7 +240,8 @@ int esh_exit(char **args) {
 int (*builtin_func[]) (char **) = {
     &esh_cd,
     &esh_help,
-    &esh_exit
+    &esh_exit,
+    &esh_builtins
 };
 
 int builtin_num(void) {
@@ -186,7 +252,7 @@ int esh_execute(char **args) {
   int i;
 
   if (args[0] == NULL) {
-    // An empty command was entered.
+    // boş komut ta devam için
     return 1;
   }
 
