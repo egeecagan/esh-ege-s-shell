@@ -1,6 +1,1 @@
-12: bu kodu user değişkeninden bağımsız hale getir
-19: asdasd
-    deneme hoca amk
-    
-    asdasd
 25: after @ add computer name + working directory

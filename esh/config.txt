@@ -1,0 +1,17 @@
+username="ege"->"toni"
+devicename="eges-mbp"->"stonks"
+
+plugins={name1, name2, name3, name4}
+
+prompt="bla bla bla"
+
+this file will be my configration file for my shell
+it will change the features of the shell
+
+the usage will be like the first two lines
+for instance it tells us if username is ege than
+change it to toni.
+
+and 4th line tells us the plugins
+
+6th line is for the prompt user will be able to change it.

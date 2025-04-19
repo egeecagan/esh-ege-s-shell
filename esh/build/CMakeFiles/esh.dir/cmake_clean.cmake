@@ -3,6 +3,8 @@ file(REMOVE_RECURSE
   "/Users/egecagankantar/Desktop/esh/out/esh.pdb"
   "CMakeFiles/esh.dir/src/esh.c.o"
   "CMakeFiles/esh.dir/src/esh.c.o.d"
+  "CMakeFiles/esh.dir/src/extras.c.o"
+  "CMakeFiles/esh.dir/src/extras.c.o.d"
   "CMakeFiles/esh.dir/src/main.c.o"
   "CMakeFiles/esh.dir/src/main.c.o.d"
 )

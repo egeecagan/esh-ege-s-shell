@@ -10,5 +10,11 @@
   "command": "/usr/bin/clang  -I/Users/egecagankantar/Desktop/esh/src -g -std=gnu99 -arch arm64 -o CMakeFiles/esh.dir/src/esh.c.o -c /Users/egecagankantar/Desktop/esh/src/esh.c",
   "file": "/Users/egecagankantar/Desktop/esh/src/esh.c",
   "output": "CMakeFiles/esh.dir/src/esh.c.o"
+},
+{
+  "directory": "/Users/egecagankantar/Desktop/esh/build",
+  "command": "/usr/bin/clang  -I/Users/egecagankantar/Desktop/esh/src -g -std=gnu99 -arch arm64 -o CMakeFiles/esh.dir/src/extras.c.o -c /Users/egecagankantar/Desktop/esh/src/extras.c",
+  "file": "/Users/egecagankantar/Desktop/esh/src/extras.c",
+  "output": "CMakeFiles/esh.dir/src/extras.c.o"
 }
 ]

@@ -166,6 +166,30 @@ src/esh.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/esh.dir/build.make CMakeFiles/esh.dir/src/esh.c.s
 .PHONY : src/esh.c.s
 
+src/extras.o: src/extras.c.o
+.PHONY : src/extras.o
+
+# target to build an object file
+src/extras.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esh.dir/build.make CMakeFiles/esh.dir/src/extras.c.o
+.PHONY : src/extras.c.o
+
+src/extras.i: src/extras.c.i
+.PHONY : src/extras.i
+
+# target to preprocess a source file
+src/extras.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esh.dir/build.make CMakeFiles/esh.dir/src/extras.c.i
+.PHONY : src/extras.c.i
+
+src/extras.s: src/extras.c.s
+.PHONY : src/extras.s
+
+# target to generate assembly for a file
+src/extras.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esh.dir/build.make CMakeFiles/esh.dir/src/extras.c.s
+.PHONY : src/extras.c.s
+
 src/main.o: src/main.c.o
 .PHONY : src/main.o
 
@@ -203,6 +227,9 @@ help:
 	@echo "... src/esh.o"
 	@echo "... src/esh.i"
 	@echo "... src/esh.s"
+	@echo "... src/extras.o"
+	@echo "... src/extras.i"
+	@echo "... src/extras.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

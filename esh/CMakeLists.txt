@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD 99)
 set(SOURCES
     src/main.c
     src/esh.c
+    src/extras.c
 )
 
 add_executable(esh ${SOURCES})
@@ -14,6 +15,7 @@ add_executable(esh ${SOURCES})
 target_include_directories(esh PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 add_custom_target(run
+    COMMAND ${CMAKE_SOURCE_DIR}/todo
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/esh
     DEPENDS esh
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}

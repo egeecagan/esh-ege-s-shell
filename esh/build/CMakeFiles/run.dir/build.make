@@ -67,6 +67,7 @@ include CMakeFiles/run.dir/compiler_depend.make
 include CMakeFiles/run.dir/progress.make
 
 CMakeFiles/run: /Users/egecagankantar/Desktop/esh/out/esh
+	cd /Users/egecagankantar/Desktop/esh && /Users/egecagankantar/Desktop/esh/todo
 	cd /Users/egecagankantar/Desktop/esh && /Users/egecagankantar/Desktop/esh/out/esh
 
 CMakeFiles/run.dir/codegen:

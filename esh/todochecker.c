@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+
     FILE *output = fopen("todos.txt", "w+");
     if (output == NULL) {
         perror("output file open error");
@@ -32,13 +33,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char line[MAX_LINE];
-    int in_multiline_todo = 0;
+    char line[MAX_LINE];           
+    int in_multiline_todo = 0;       
     int line_number = 0;
     int todo_start_line = 0;
 
     while (fgets(line, MAX_LINE, input) != NULL) {
-        line_number++;
+        line_number++;      
 
         if (in_multiline_todo) {
             char *end_comment = strstr(line, "*/");
@@ -60,7 +61,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        char *single = strstr(line, "//todo");
+        char *single = strstr(line, "//todo");    
         if (single != NULL) {
             single += 7;
             while (*single == ':' || *single == ' ' || *single == '\t') single++;
@@ -71,7 +72,7 @@ int main(int argc, char *argv[]) {
             char *multi = strstr(line, "/*todo");
             if (multi != NULL) {
                 multi += 7;
-                while (*multi == ':' || *multi == ' ' || *multi == '\t') multi++;
+                while (*multi == ':' || *multi == ' ' || *multi == '\t') multi++;  
                 fprintf(output, "%d: %s", line_number, multi);
 
                 if (strstr(line, "*/") == NULL) {
@@ -81,6 +82,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    /* 
+    
+    bildiğim tek sıkıntı eğer /*todo asdasd* / tek satırda ise satır 
+    sonuna bu sondaki yıldız slash eklenir düzeltmeye üşendim.
+
+    */
+   
     printf("todo's are in written!\n");
 
     fclose(input);

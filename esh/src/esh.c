@@ -1,28 +1,28 @@
 #include "esh.h"
+#include "extras.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+// bir struct ile process bilgisi tutulabilir.
+typedef struct deviceinfo {
+    char *username;
+    char *devicename;
+} devinfo_t;
 
 void esh_loop(void) {
     char *line;
     char **args;
     int status;
 
-    const char *user = getenv("USER");  //todo bu kodu user değişkeninden bağımsız hale getir
-    
-    if (user == NULL) {
-        fprintf(stderr, "user name error\n");
-        exit(EXIT_FAILURE);
-    }
-
-    /*todo asdasd
-    deneme hoca amk
-    
-    asdasd*/
+    devinfo_t *info;
+    info = (devinfo_t *)malloc(sizeof(devinfo_t));
+    info->devicename = getdevicename();
+    info->username = getusername();
 
     do {
-        printf("[%s@]? ",user);  //todo after @ add computer name + working directory
+        printf("[%s@%s]? ", info->username, info->devicename);  //todo after @ add computer name + working directory
         line = esh_read_line();
         args = esh_split_line(line);
         status = esh_execute(args);
@@ -47,7 +47,6 @@ char *esh_read_line(void) {
         fprintf(stderr, "esh: line buffer allocation error\n");
         exit(EXIT_FAILURE);
     }
-
     while (1) {
         c = getchar();
         if (c == EOF || c == '\n') {
@@ -92,15 +91,11 @@ char **esh_split_line(char *line) {
                 exit(EXIT_FAILURE);
             }
         }
-
         token = strtok(NULL, " \t\r\n\a");
     }
-
     tokens[position] = NULL; 
     return tokens;
 }
-
-
 
 // starts the process
 int esh_launch(char **args) {
