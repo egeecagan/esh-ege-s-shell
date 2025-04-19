@@ -12,7 +12,7 @@ set(SOURCES
 
 add_executable(esh ${SOURCES})
 
-target_include_directories(esh PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(esh PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 add_custom_target(run
     COMMAND ${CMAKE_SOURCE_DIR}/todo

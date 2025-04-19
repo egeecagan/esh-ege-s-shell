@@ -4,7 +4,7 @@
 # compile C with /usr/bin/clang
 C_DEFINES = 
 
-C_INCLUDES = -I/Users/egecagankantar/Desktop/esh/src
+C_INCLUDES = -I/Users/egecagankantar/Desktop/esh/include
 
 C_FLAGSarm64 = -g -std=gnu99 -arch arm64
 

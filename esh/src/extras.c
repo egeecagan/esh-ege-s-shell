@@ -11,6 +11,7 @@ for example gethostname or user name etc.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 // bilgisayardaki aktif kullanıcıyı verir
 char *getusername(void) {
@@ -62,4 +63,14 @@ char *getdevicename(void) {
     }
 
     return device;
+}
+
+int isnumeric(char *num) {
+    int length = strlen(num);
+    for (int i = 0; i < length; i++) {
+        if (!isdigit(num[i])) {
+            return 0;  // Sayı değil
+        }
+    }
+    return 1;  // Hepsi sayı
 }

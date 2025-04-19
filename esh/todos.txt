@@ -1,1 +1,1 @@
-25: after @ add computer name + working directory
+340: şuanda son 10 komutu basma işlemi yok sözde var

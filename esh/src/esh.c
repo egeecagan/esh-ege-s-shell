@@ -1,20 +1,32 @@
 #include "esh.h"
 #include "extras.h"
+
+#define HIST_SIZE 1000
+
+// include lib cmake içine eklendiği için bunları değiştirömeye gerek yok
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 
-// bir struct ile process bilgisi tutulabilir.
-typedef struct deviceinfo {
-    char *username;
-    char *devicename;
-} devinfo_t;
+cmd_hist_t *hist;
 
 void esh_loop(void) {
+
+    hist = malloc(sizeof(cmd_hist_t));
+
     char *line;
     char **args;
     int status;
+
+    char *home = getenv("HOME");
+    if (home != NULL) {
+        chdir(home);
+    } else {
+        chdir("/");
+    }
 
     devinfo_t *info;
     info = (devinfo_t *)malloc(sizeof(devinfo_t));
@@ -22,20 +34,72 @@ void esh_loop(void) {
     info->username = getusername();
 
     do {
-        printf("[%s@%s]? ", info->username, info->devicename);  //todo after @ add computer name + working directory
+        char *path = getcwd_path();
+        printf("[\033[36m%s\033[0m@\033[35m%s\033[0m %s] \033[32m$\033[0m ", info->username, info->devicename, path);
+        free(path);
+    
         line = esh_read_line();
-        args = esh_split_line(line);
-        status = esh_execute(args);
-        /*
-            yaptığımız iş aslında bütün satırı bir array olarak okmak
-            ondan sonra satırdaki her argumanı ayırmak.
-            yani line bir uzun satır iken args ise boşluk ile ayrılmış
-            elemanları.
-        */
-        free(line);
-        free(args);
-    } while (status);
+    
+        if (line == NULL || strlen(line) == 0 || strspn(line, " \t\r\n") == strlen(line)) {
+            status = 1;
+        }
 
+        else if (strcmp(line, "!!") == 0) {
+            if (hist->rear != NULL) {
+
+                char *real_command = strdup(hist->rear->command);        
+
+                int linelen = strlen(real_command);
+                node_t *historynode = (node_t *)malloc(sizeof(node_t));
+                historynode->command = malloc(sizeof(char) * (linelen + 1));
+                strcpy(historynode->command, real_command);
+                historynode->next = NULL;
+        
+                if (hist->front == NULL && hist->rear == NULL) {
+                    hist->front = historynode;
+                    hist->rear = historynode;
+                } else {
+                    hist->rear->next = historynode;
+                    hist->rear = historynode;
+                }
+                printf("%s\n",real_command);
+
+                char **prev_args = esh_split_line(real_command);
+                status = esh_execute(prev_args);
+        
+                free(real_command);
+                free(prev_args);
+            } else {
+                fprintf(stderr, "esh: no previous command found\n");
+                status = 1;
+            }
+        }
+        
+        else {
+            int linelen = strlen(line);
+
+            node_t *historynode = (node_t *)malloc(sizeof(node_t));
+            historynode->command = malloc(sizeof(char) * (linelen + 1));
+
+            strcpy(historynode->command, line);
+            historynode->next = NULL;
+    
+            if (hist->front == NULL && hist->rear == NULL) {
+                hist->front = historynode;
+                hist->rear = historynode;
+            } else {
+                hist->rear->next = historynode;
+                hist->rear = historynode;
+            }
+    
+            args = esh_split_line(line);
+            status = esh_execute(args);
+            free(args);
+        }
+    
+        free(line);
+    } while (status);
+    
 }
 
 char *esh_read_line(void) {
@@ -60,7 +124,7 @@ char *esh_read_line(void) {
 
         if (position >= bufsiz) {
             bufsiz += 1024;
-            buffer = realloc(buffer, bufsiz);  // eski bufferı da kopyalar.
+            buffer = realloc(buffer, bufsiz); 
             if (!buffer) {
                 fprintf(stderr, "esh: line buffer allocation error\n");
                 exit(EXIT_FAILURE);
@@ -97,7 +161,6 @@ char **esh_split_line(char *line) {
     return tokens;
 }
 
-// starts the process
 int esh_launch(char **args) {
     pid_t pid, wpid;
     int status;
@@ -105,7 +168,6 @@ int esh_launch(char **args) {
     pid = fork();
 
     if (pid == 0) {
-        // child process
         if (execvp(args[0], args) == -1) {
             perror("esh");
         }
@@ -128,23 +190,42 @@ int esh_launch(char **args) {
     return 1;
 }
 
-// shell builtin fonksiyonlarımız
+char *getcwd_path(void) {
+    size_t size = 1024; // büyülü sayı hoca
+    char *buffer = (char *)malloc(size);
+
+    const char *fallback = "unknown";
+
+    if (!buffer) {
+        fprintf(stderr, "buffer alloc error for getcwd\n");
+        return strdup(fallback);
+    } else {
+        if (getcwd(buffer, size) == NULL) {
+            fprintf(stderr, "buffer alloc error for getcwd\n");
+            return strdup(fallback);
+        }
+        return buffer;
+    }
+}
+
 char *builtin_str[] = {
     "cd",
     "help",
     "exit",
-    "builtins"
+    "builtins",
+    "history"
 };
 
 char *builtin_help[] = {
     "cd - takes 1 argument and it is the path you can use '.', '..', '~', ''(i mean no second arg)",
     "help - help or help <builtin> only 1 argument",
     "exit - closes the shell",
-    "builtins - shows all the builtins"
+    "builtins - shows all the builtins",
+    "history <num> -> optional - displays the last <num> commands executed succsesfully. if num not given it will print only 10"
 };
   
 int esh_cd(char **args) {
-    const char *target_dir = ".";  // varsayılan olarak current directory
+    const char *target_dir = "."; 
 
     int arg_count = 0;
     while (args[arg_count] != NULL) {
@@ -155,20 +236,19 @@ int esh_cd(char **args) {
         return 1;
     }
 
-
     if (args[1] == NULL) {
-        target_dir = "."; // cd yalnızca yazılmışsa mevcut dizinde kal
+        target_dir = "."; 
     } 
     else if (strcmp(args[1], "~") == 0) {
         char *home = getenv("HOME");
         if (home == NULL) {
-            fprintf(stderr, "esh: HOME environment variable not set.\n");
+            fprintf(stderr, "esh: home environment variable not set.\n");
             return 1;
         }
         target_dir = home;
     }
     else {
-        target_dir = args[1]; // normal cd path
+        target_dir = args[1]; 
     }
 
     if (chdir(target_dir) != 0) {
@@ -237,9 +317,64 @@ int esh_builtins(char **args) {
     return 1;
 }
 
+int esh_history(char **args) {
+    if (hist == NULL || hist->front == NULL) {
+        printf("history is empty.\n");
+        return 1;
+    }
+    int arg_count = 0;
+    while (args[arg_count] != NULL) {
+        arg_count++;
+    }
+    if (arg_count == 1) {
+        int num = HIST_SIZE, i = 1;
+        node_t *cmd = hist->front;
+    
+        //todo şuanda son 10 komutu basma işlemi yok sözde var
+        while (cmd != NULL && i < num) {
+            printf("%d - %s\n", i, cmd->command);
+            cmd = cmd->next;
+            i++;
+        }
+        return 1;
+    } 
+    else if (arg_count == 2) {
+        //todo buraya fix lazım acil
+        int num;
+        if (isnumeric(args[1])) {
+            num = atoi(args[1]);
+            node_t *cmd = hist->front;
+            int i = 1;
+            while (cmd != NULL && i < num) {
+                printf("%d - %s\n", i, cmd->command);
+                cmd = cmd->next;
+                i++;
+            }
+            return 1;
+        } 
+        else {
+            fprintf(stderr, "esh: history takes an integer\n");
+            return 1;
+        }
+    } 
+    else {
+        fprintf(stderr, "wrong usage correct way either only history or history <num>\n");
+        return 1;
+    }   
+}
 
 int esh_exit(char **args) {
-    return 0;
+    node_t *cmd = hist->front;
+
+    while (cmd != NULL) {
+        node_t *next = cmd->next;
+        free(cmd->command);  
+        free(cmd);          
+        cmd = next;         
+    }
+
+    free(hist);  
+    return 0;   
 }
 
 // bu decleration array of function pointers which take char ** as parameter and return int demektir.
@@ -247,7 +382,8 @@ int (*builtin_func[]) (char **) = {
     &esh_cd,
     &esh_help,
     &esh_exit,
-    &esh_builtins
+    &esh_builtins,
+    &esh_history
 };
 
 int builtin_num(void) {
@@ -255,18 +391,16 @@ int builtin_num(void) {
 }
 
 int esh_execute(char **args) {
-  int i;
+    int i;
 
-  if (args[0] == NULL) {
-    // boş komut ta devam için
-    return 1;
-  }
-
-  for (i = 0; i < builtin_num(); i++) {
-    if (strcmp(args[0], builtin_str[i]) == 0) {
-      return (*builtin_func[i])(args);
+    if (args[0] == NULL) {
+        return 1;
     }
-  }
 
-  return esh_launch(args);
+    for (i = 0; i < builtin_num(); i++) {
+        if (strcmp(args[0], builtin_str[i]) == 0) {
+            return (*builtin_func[i])(args);
+        }
+    }
+    return esh_launch(args);
 }
