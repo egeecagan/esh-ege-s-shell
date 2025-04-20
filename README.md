@@ -2,7 +2,6 @@
 
 this is a shell implementation to understand how it\
 is working under the hood. and few more feature by me.
-
 ---
 
 ## usage
