@@ -1,83 +1,68 @@
-# 🐚 esh - Ege's Shell
+# 🐚 esh - ege's shell
 
-`esh` (Ege's Shell) is a simple shell implementation written in **C** to explore how command-line interpreters work under the hood.  
-This project also includes several built-in features developed for learning and experimentation purposes.
-
----
-
-## 🚀 How to Run
-
-1. Navigate to the `build` directory:
-
-    ```bash
-    cd build
-    ```
-
-2. Generate the build files using CMake:
-
-    ```bash
-    cmake ..
-    ```
-
-3. Compile and run the shell:
-    ```bash
-    make run
-    ```
+`esh` (ege's shell) is a simple shell implementation written in **C** to explore how command-line interpreters work under the hood.  
+this project also includes several built-in features developed for learning and experimentation purposes.
 
 ---
 
-## 🔧 Features
+## 🚀 how to run
 
--   Basic command execution (`ls`, `cat`, `echo`, etc.)
--   Command history tracking
+```bash
+cd build
+cmake ..
+make run
+```
+
+---
+
+## features
+
+-   basic command execution (`ls`, `cat`, `echo`, etc.)
+-   command history tracking
 -   `!!` to repeat the last executed command
--   Built-in commands:
+-   built-in commands:
     -   `cd`
     -   `help`
     -   `exit`
     -   `builtins`
     -   `history [num]` (optional argument)
 
-> Type `builtins` to see all built-in commands.  
-> Use `help <builtin>` for more information on a specific command.
+> type `builtins` to see all built-in commands.  
+> use `help <builtin>` for more information on a specific command.
 
 ---
 
-## 📌 Planned Features (To Be Implemented maybe)
+## 📌 planned features (to be implemented maybe)
 
--   Signal handling (e.g., `Ctrl+C`)
--   Piping (`|`)
--   Stream redirection (`>`, `<`, `>>`)
--   Reading configuration files at startup
+-   signal handling `ctrl+c`
+-   piping `|`
+-   stream redirection `>`, `<`, `>>`
+-   reading configuration files at startup
 -   `!num` to execute a specific history command
--   Background process support (`&`)
+-   Background process support `&`
+-   up and down keys to get last executed command directly
 
 ---
 
-## 📝 Todo Checker
+## 📝 todo checker
 
-There is also a small helper tool called `todo` included in the project.  
-It checks the ``file for`TODO` tags to remind what’s left to implement.
+there is also a small helper tool called `todo` included in the project.  
+it checks the file for `TODO` tags to remind what’s left to implement.
 
-### Usage:
+there is a mini bug i know with this if you create multi line command and
+use onlt one line it will print the line plus the last star and slash.
+
+### usage:
 
 ```bash
 ./todo <filename>
 ```
-
-> You can also pass a file name as an argument to check a different file:
->
-> ```bash
-> ./todo src/another_file.c
-> ```
-
 ---
 
-## 📚 Purpose
+## 📚 references & inspiration
 
-This is a **learning project**.  
-The main goal is to understand how a shell interacts with the OS using system calls like `fork()`, `execvp()`, `wait()`, and handle things like input parsing, memory management, and process control manually.
+this project was inspired by the guide ["Write a Shell in C"](https://brennan.io/2015/01/16/write-a-shell-in-c/) by Stephen Brennan.
+it served as a foundational resource to understand how to implement basic shell features in C. 
+it's a really well-written and highly educational article — i strongly recommend it to anyone interested in how shell is working.
 
----
-
-Made with ☕ and `C` by **Ege Çağan Kantar**
+Made with `C` by **Ege Çağan Kantar**
