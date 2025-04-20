@@ -15,7 +15,6 @@ add_executable(esh ${SOURCES})
 target_include_directories(esh PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 add_custom_target(run
-    COMMAND ${CMAKE_SOURCE_DIR}/todo
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/esh
     DEPENDS esh
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
