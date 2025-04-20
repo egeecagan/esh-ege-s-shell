@@ -3,7 +3,6 @@
 `esh` (ege's shell) is a simple shell implementation written in **C** to explore how command-line interpreters work under the hood.  
 this project also includes several built-in features developed for learning and experimentation purposes.
 
----
 
 ## 🚀 how to run
 
@@ -12,8 +11,6 @@ cd build
 cmake ..
 make run
 ```
-
----
 
 ## features
 
@@ -30,7 +27,6 @@ make run
 > type `builtins` to see all built-in commands.  
 > use `help <builtin>` for more information on a specific command.
 
----
 
 ## 📌 planned features (to be implemented maybe)
 
@@ -41,8 +37,6 @@ make run
 -   `!num` to execute a specific history command
 -   Background process support `&`
 -   up and down keys to get last executed command directly
-
----
 
 ## 📝 todo checker
 
@@ -57,7 +51,6 @@ use onlt one line it will print the line plus the last star and slash.
 ```bash
 ./todo <filename>
 ```
----
 
 ## 📚 references & inspiration
 
