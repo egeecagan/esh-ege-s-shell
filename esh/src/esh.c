@@ -12,10 +12,16 @@
 #include <ctype.h>
 
 cmd_hist_t *hist;
+int hist_count;
 
 void esh_loop(void) {
 
     hist = malloc(sizeof(cmd_hist_t));
+    if (hist) {
+        hist_count = 0;
+    } else {
+        fprintf(stderr, "history allocation error\n");
+    }
 
     char *line;
     char **args;
@@ -58,9 +64,11 @@ void esh_loop(void) {
                 if (hist->front == NULL && hist->rear == NULL) {
                     hist->front = historynode;
                     hist->rear = historynode;
+                    hist_count++;
                 } else {
                     hist->rear->next = historynode;
                     hist->rear = historynode;
+                    hist_count++;
                 }
                 printf("%s\n",real_command);
 
@@ -74,7 +82,6 @@ void esh_loop(void) {
                 status = 1;
             }
         }
-        
         else {
             int linelen = strlen(line);
 
@@ -87,9 +94,11 @@ void esh_loop(void) {
             if (hist->front == NULL && hist->rear == NULL) {
                 hist->front = historynode;
                 hist->rear = historynode;
+                hist_count++;
             } else {
                 hist->rear->next = historynode;
                 hist->rear = historynode;
+                hist_count++;
             }
     
             args = esh_split_line(line);
@@ -198,7 +207,8 @@ char *getcwd_path(void) {
 
     if (!buffer) {
         fprintf(stderr, "buffer alloc error for getcwd\n");
-        return strdup(fallback);
+        // strdup fonksiyonu char arrayi heape taşır.
+        return strdup(fallback); 
     } else {
         if (getcwd(buffer, size) == NULL) {
             fprintf(stderr, "buffer alloc error for getcwd\n");
@@ -271,7 +281,7 @@ int esh_help(char **args) {
         printf("a basic shell implementation in c by ege cagan kantar");
         
         printf("manual for builtins: help 'builtin'\n");
-        printf("help for other functions: man 'function'\n");
+        printf("help for other functions: man <function>\n");
         printf("show built ins: <builtins>\n");
 
     } else if (arg_count == 2) {
@@ -327,36 +337,66 @@ int esh_history(char **args) {
         arg_count++;
     }
     if (arg_count == 1) {
-        int num = HIST_SIZE, i = 1;
+        int start_index = hist_count > 10 ? hist_count - 10 : 0;
+        int current_index = 0;
+        int print_index = hist_count > 10 ? hist_count - 10 + 1 : 1;
+
         node_t *cmd = hist->front;
-    
-        //todo şuanda son 10 komutu basma işlemi yok sözde var
-        while (cmd != NULL && i < num) {
-            printf("%d - %s\n", i, cmd->command);
+
+        while (cmd != NULL) {
+            if (current_index >= start_index && cmd->next != NULL) {
+                printf("%d - %s\n", print_index, cmd->command);
+                print_index++;
+            }
             cmd = cmd->next;
-            i++;
+            current_index++;
         }
+
         return 1;
     } 
+
     else if (arg_count == 2) {
-        //todo buraya fix lazım acil
         int num;
         if (isnumeric(args[1])) {
             num = atoi(args[1]);
+    
+            if (num <= 0) {
+                fprintf(stderr, "esh: history argument must be a positive integer\n");
+                return 1;
+            }
+    
+            if (num > hist_count) {
+                fprintf(stderr, "given num is bigger than hist size last 10 given\n");
+                num = 10; 
+            }
+    
+            int skip_last = 1; // history komutunu göstermemek için
+            int visible_count = hist_count - skip_last;
+    
+            if (num > visible_count) {
+                num = visible_count;
+            }
+    
+            int start_index = visible_count - num + 1;
+            int current_index = 1;
+    
             node_t *cmd = hist->front;
-            int i = 1;
-            while (cmd != NULL && i < num) {
-                printf("%d - %s\n", i, cmd->command);
+    
+            while (cmd != NULL) {
+                if (current_index >= start_index && cmd->next != NULL) {
+                    printf("%d - %s\n", current_index, cmd->command);
+                }
+    
                 cmd = cmd->next;
-                i++;
+                current_index++;
             }
             return 1;
         } 
         else {
             fprintf(stderr, "esh: history takes an integer\n");
             return 1;
-        }
-    } 
+            }
+        } 
     else {
         fprintf(stderr, "wrong usage correct way either only history or history <num>\n");
         return 1;

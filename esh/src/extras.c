@@ -65,6 +65,7 @@ char *getdevicename(void) {
     return device;
 }
 
+// checks the number is it numeric
 int isnumeric(char *num) {
     int length = strlen(num);
     for (int i = 0; i < length; i++) {
