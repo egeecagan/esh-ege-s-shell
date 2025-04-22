@@ -1,20 +1,20 @@
 #include "esh.h"
 #include "extras.h"
 
-#define HIST_SIZE 1000
-
-// include lib cmake içine eklendiği için bunları değiştirömeye gerek yok
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <signal.h>
 
 cmd_hist_t *hist;
 int hist_count;
 
 void esh_loop(void) {
+    signal(SIGINT, SIG_IGN);   
+    signal(SIGTTOU, SIG_IGN);  
+    signal(SIGTTIN, SIG_IGN);  
 
     hist = malloc(sizeof(cmd_hist_t));
     if (hist) {
@@ -105,7 +105,7 @@ void esh_loop(void) {
             status = esh_execute(args);
             free(args);
         }
-    
+
         free(line);
     } while (status);
     
@@ -126,10 +126,8 @@ char *esh_read_line(void) {
             buffer[position] = '\0';
             return buffer;
         } else {
-            buffer[position] = c; // c ya da yeni satır değilse yaz
-        } position ++; // while loop her bir karakter için çalıştığı için
-        // arttırma işlemi dışarda olmalı yoksa if için \0 karakteri için
-        // pozisyon artmaz
+            buffer[position] = c; 
+        } position ++; 
 
         if (position >= bufsiz) {
             bufsiz += 1024;
@@ -143,71 +141,57 @@ char *esh_read_line(void) {
 }
 
 char **esh_split_line(char *line) {
-    int bufsiz = 64, position = 0;
-    char *token, **tokens = malloc(bufsiz * sizeof(char*));
+    char **val = shell_parser(line);
 
-    if (!tokens) {
-        fprintf(stderr, "esh: token buffer allocation error\n");
-        exit(EXIT_FAILURE);
-    }
+    // printf("tokens :\n");
+    // for (int i = 0; val[i] != NULL; i++) {
+    //     printf("  [%d]: '%s'\n", i, val[i]);
+    // }
 
-    token = strtok(line, " \t\r\n\a");
-    while (token != NULL) {
-        tokens[position] = token;
-        position++;
-
-        if (position >= bufsiz) {
-            bufsiz += bufsiz;
-            tokens = realloc(tokens, bufsiz * sizeof(char*));
-            if (!tokens) {
-                fprintf(stderr, "esh: allocation error\n");
-                exit(EXIT_FAILURE);
-            }
-        }
-        token = strtok(NULL, " \t\r\n\a");
-    }
-    tokens[position] = NULL; 
-    return tokens;
+    return val;
 }
 
 int esh_launch(char **args) {
-    pid_t pid, wpid;
+    pid_t pid;
     int status;
-
     pid = fork();
 
     if (pid == 0) {
-        if (execvp(args[0], args) == -1) {
-            perror("esh");
-        }
+        setpgid(0, 0);// pgid process group id demek ve bu child processi esh nin olduğu gruptan alır kendi grubunu açar ve lider yapar   
+        signal(SIGINT, SIG_DFL);           
+        tcsetpgrp(STDIN_FILENO, getpid());    
+        execvp(args[0], args);
+        perror("esh");
         exit(EXIT_FAILURE);
     } 
-    
     else if (pid < 0) {
         perror("esh");
-    }
-
-    // parent process in cocuk process beklemesiyle ilgili bir kod.
+        return 1;
+    } 
     else {
-        // parent process işleri
-        do {
-            wpid = waitpid(pid, &status, WUNTRACED);
-            // child işleminin bitmesini bekler
+        setpgid(pid, pid);                    
+        tcsetpgrp(STDIN_FILENO, pid);         
+        waitpid(pid, &status, WUNTRACED);     
+        tcsetpgrp(STDIN_FILENO, getpgrp());  
 
-        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+        // suspend olduysa devam ettir (bazı durumlar için)x
+        if (WIFSTOPPED(status)) {
+            kill(pid, SIGCONT);
+        }
     }
     return 1;
 }
 
+
 char *getcwd_path(void) {
-    size_t size = 1024; // büyülü sayı hoca
+    size_t size = 1024;
     char *buffer = (char *)malloc(size);
 
     const char *fallback = "unknown";
 
     if (!buffer) {
         fprintf(stderr, "buffer alloc error for getcwd\n");
-        // strdup fonksiyonu char arrayi heape taşır.
+
         return strdup(fallback); 
     } else {
         if (getcwd(buffer, size) == NULL) {
@@ -370,7 +354,7 @@ int esh_history(char **args) {
                 num = 10; 
             }
     
-            int skip_last = 1; // history komutunu göstermemek için
+            int skip_last = 1; 
             int visible_count = hist_count - skip_last;
     
             if (num > visible_count) {

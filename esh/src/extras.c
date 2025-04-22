@@ -13,7 +13,9 @@ for example gethostname or user name etc.
 #include <string.h>
 #include <ctype.h>
 
-// bilgisayardaki aktif kullanıcıyı verir
+#define INITIAL_BUFSIZE 64
+
+
 char *getusername(void) {
     struct passwd *pw;
     uid_t uid;
@@ -25,17 +27,9 @@ char *getusername(void) {
     } return NULL;
 }
 
-
-// bilgisayar adını verir
 char *getdevicename(void) {
 
-    // maclerde bu komut ile bilgisayar adı alınır
     const char *command = "scutil --get ComputerName";
-
-    // popen - initiate pipe streams to or from a process diyor man page
-    // dikkat et kapatırken fclose değil pclose. ama bu kullanım hoşuma gitmedi
-    // ileride değiştir çünkü galiba processin çalıştığı shellde komutun outputunu
-    // buraya döndürüyor.
     FILE *f = popen("scutil --get ComputerName", "r");
 
     const char *unk = "unknown";
@@ -45,19 +39,18 @@ char *getdevicename(void) {
         if (f != NULL) {
             pclose(f);
         }
-        return strdup(unk);    // return unk desen stack dönmeye çalışır hata 
-                               // strdup char * ı heap e kopyalar ve char * döndürür
+        return strdup(unk);
+                            
     }
 
     if (!f) {
         strncpy(device, unk, 256);
-        // strcpy kullanmadık çünkü overflow riski var güvenli değil
     } else {
         if (fgets(device, 256, f) == NULL) {
             strncpy(device, unk, 256);
             device[255] = '\0';
         } else {
-            device[strcspn(device, "\r\n\t")] = '\0';  // bu karakterlerin olduğu ilk indeksi verir strcspn
+            device[strcspn(device, "\r\n\t")] = '\0';  
         }
         pclose(f);
     }
@@ -65,13 +58,91 @@ char *getdevicename(void) {
     return device;
 }
 
-// checks the number is it numeric
+
 int isnumeric(char *num) {
     int length = strlen(num);
     for (int i = 0; i < length; i++) {
         if (!isdigit(num[i])) {
-            return 0;  // Sayı değil
+            return 0;  
         }
     }
-    return 1;  // Hepsi sayı
+    return 1;  
+}
+
+int is_operator_char(char c) {
+    return (c == '&' || c == '|' || c == '<' || c == '>' || c == ';');
+}
+
+// her sistemde bu fonksiyon olmayabiliyormuş ama nedenini anlamadım
+char *strndup(const char *s, size_t n) {
+    char *result = malloc(n + 1);
+    if (!result) return NULL;
+    strncpy(result, s, n);
+    result[n] = '\0';
+    return result;
+}
+
+// hardest function of my life. needs a huge bug check but i am moving on.
+char **shell_parser(char *line) {
+    int bufsiz = INITIAL_BUFSIZE;
+    int position = 0;
+    char **tokens = malloc(bufsiz * sizeof(char *)); // bir satır maks 64 karakter.
+    int i = 0;
+
+    if (!tokens) {
+        fprintf(stderr, "esh: allocation error\n");
+        exit(EXIT_FAILURE);
+    }
+
+    while (line[i] != '\0') {
+        while (isspace(line[i])) i++;   // baştaki boşlukları atlar
+        if (line[i] == '\0') break;     // boşluk sonrası ilk gelen karakter null ise promp okunmaz
+
+        if (line[i] == '"' || line[i] == '\'') {
+            char quote = line[i++];
+            int start = i;
+
+            if (quote == '"') {
+                while (line[i] && !(line[i] == '"' && line[i - 1] != '\\')) i++;
+            } else {
+                while (line[i] && line[i] != '\'') i++;
+            }
+
+            if (line[i] == '\0') {
+                fprintf(stderr, "esh: unmatched quote\n");
+                exit(EXIT_FAILURE);
+            }
+
+            tokens[position++] = strndup(&line[start], i - start);
+            i++;
+        }
+
+        else if (line[i] == '&') {
+            tokens[position++] = strndup(&line[i], 1);
+            i++;
+        }
+
+        else {
+            int start = i;
+            while (line[i] &&
+                   !isspace(line[i]) &&
+                   line[i] != '&') {
+                if (line[i] == '\\' && line[i+1] != '\0') i++;
+                i++;
+            }
+            tokens[position++] = strndup(&line[start], i - start);
+        }
+
+        if (position >= bufsiz) {
+            bufsiz *= 2;
+            tokens = realloc(tokens, bufsiz * sizeof(char *));
+            if (!tokens) {
+                fprintf(stderr, "esh: allocation error\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+
+    tokens[position] = NULL;
+    return tokens;
 }
