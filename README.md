@@ -23,6 +23,7 @@ make run
     -   `exit`
     -   `builtins`
     -   `history [num]` (optional argument)
+- also in last commit i implemented signal handling now you can interrupt a process by using ctrl + c it will not stop the main shell process.
 
 > type `builtins` to see all built-in commands.  
 > use `help <builtin>` for more information on a specific command.
@@ -30,13 +31,13 @@ make run
 
 ## 📌 planned features (to be implemented maybe)
 
--   signal handling `ctrl+c`
 -   piping `|`
 -   stream redirection `>`, `<`, `>>`
 -   reading configuration files at startup
 -   `!num` to execute a specific history command
 -   Background process support `&`
 -   up and down keys to get last executed command directly
+so basically the operators and `;`are not implemented yet.
 
 ## 📝 todo checker
 
