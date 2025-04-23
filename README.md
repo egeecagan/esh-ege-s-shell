@@ -5,7 +5,7 @@ this project also includes several built-in features developed for learning and 
 
 
 ## 🚀 how to run
-
+create a build folder ind the esh folder and then
 ```bash
 cd build
 cmake ..
