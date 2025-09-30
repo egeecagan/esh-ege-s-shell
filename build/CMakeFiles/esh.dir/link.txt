@@ -1,0 +1,1 @@
+/usr/bin/cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/sqlite/lib CMakeFiles/esh.dir/src/builtin_functions.c.o CMakeFiles/esh.dir/src/getters.c.o CMakeFiles/esh.dir/src/main.c.o CMakeFiles/esh.dir/src/esh.c.o CMakeFiles/esh.dir/src/internal_functions.c.o -o /Users/egecagankantar/Desktop/esh-ege-s-shell/out/esh

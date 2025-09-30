@@ -5,61 +5,16 @@ for example gethostname or user name etc.
 
 */
 
-#include "extras.h"
-#include <unistd.h>
-#include <pwd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 
+#include "internal_functions.h"
+
 #define INITIAL_BUFSIZE 64
 
-
-char *getusername(void) {
-    struct passwd *pw;
-    uid_t uid;
-    uid = geteuid();
-    pw = getpwuid(uid);
-
-    if (pw) {
-        return pw->pw_name;
-    } return NULL;
-}
-
-char *getdevicename(void) {
-
-    const char *command = "scutil --get ComputerName";
-    FILE *f = popen("scutil --get ComputerName", "r");
-
-    const char *unk = "unknown";
-    char *device = (char *)malloc(sizeof(char) * 256);
-
-    if (!device) {
-        if (f != NULL) {
-            pclose(f);
-        }
-        return strdup(unk);
-                            
-    }
-
-    if (!f) {
-        strncpy(device, unk, 256);
-    } else {
-        if (fgets(device, 256, f) == NULL) {
-            strncpy(device, unk, 256);
-            device[255] = '\0';
-        } else {
-            device[strcspn(device, "\r\n\t")] = '\0';  
-        }
-        pclose(f);
-    }
-
-    return device;
-}
-
-
-int isnumeric(char *num) {
+int is_numeric(char *num) {
     int length = strlen(num);
     for (int i = 0; i < length; i++) {
         if (!isdigit(num[i])) {
@@ -74,9 +29,13 @@ int is_operator_char(char c) {
 }
 
 // her sistemde bu fonksiyon olmayabiliyormuş ama nedenini anlamadım
-char *strndup(const char *s, size_t n) {
+char *custom_strndup(const char *s, size_t n) {
     char *result = malloc(n + 1);
-    if (!result) return NULL;
+
+    if (!result) {
+        return NULL;
+    }
+    
     strncpy(result, s, n);
     result[n] = '\0';
     return result;

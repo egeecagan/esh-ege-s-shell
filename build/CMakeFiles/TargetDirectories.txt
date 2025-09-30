@@ -1,0 +1,4 @@
+/Users/egecagankantar/Desktop/esh-ege-s-shell/build/CMakeFiles/esh.dir
+/Users/egecagankantar/Desktop/esh-ege-s-shell/build/CMakeFiles/run.dir
+/Users/egecagankantar/Desktop/esh-ege-s-shell/build/CMakeFiles/edit_cache.dir
+/Users/egecagankantar/Desktop/esh-ege-s-shell/build/CMakeFiles/rebuild_cache.dir

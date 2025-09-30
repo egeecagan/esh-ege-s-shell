@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "stdlib.h": "c",
+        "ctype.h": "c",
+        "signal.h": "c",
+        "stdio.h": "c",
+        "internal_functions.h": "c",
+        "types.h": "c"
+    }
+}

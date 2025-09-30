@@ -1,5 +1,6 @@
 #include "esh.h"
-#include "extras.h"
+#include "internal_functions.h"
+#include "types.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,100 +10,116 @@
 #include <signal.h>
 
 cmd_hist_t *hist;
-int hist_count;
+int         hist_count;
 
 void esh_loop(void) {
-    signal(SIGINT, SIG_IGN);   
-    signal(SIGTTOU, SIG_IGN);  
-    signal(SIGTTIN, SIG_IGN);  
+
+    signal(SIGINT, SIG_IGN);    // ctrl + c yi shellin almasini engeller
+
+    signal(SIGTTOU, SIG_IGN);   // background process'in input alme ve output yazma hakkini engeller
+    signal(SIGTTIN, SIG_IGN);   // ornegin vim kullanirken arka planda bir find process i durmadan yazi yazarsa ekrana karisir
+
+    char **builtin_str = get_builtin_str();
 
     hist = malloc(sizeof(cmd_hist_t));
     if (hist) {
         hist_count = 0;
     } else {
-        fprintf(stderr, "history allocation error\n");
+        fprintf(stderr, "[esh] history allocation error\n");
     }
 
-    char *line;
     char **args;
-    int status;
+    char  *line;
+    int    status;
 
-    char *home = getenv("HOME");
+    char *home = getenv("HOME"); // if "HOME" enviroment variable defined start from there else use "/" (root dir)
     if (home != NULL) {
         chdir(home);
     } else {
         chdir("/");
     }
 
-    devinfo_t *info;
-    info = (devinfo_t *)malloc(sizeof(devinfo_t));
-    info->devicename = getdevicename();
-    info->username = getusername();
+    device_info_t *info;
+
+    info = (device_info_t *)malloc(sizeof(device_info_t));
+
+    info->device_name = get_device_name();
+    info->user_name   = get_user_name();
 
     do {
         char *path = getcwd_path();
-        printf("[\033[36m%s\033[0m@\033[35m%s\033[0m %s] \033[32m$\033[0m ", info->username, info->devicename, path);
+
+        printf("[\033[36m%s\033[0m@\033[35m%s\033[0m %s] \033[32m$\033[0m ", info->user_name, info->device_name, path);
+        
         free(path);
+        path = NULL;
     
         line = esh_read_line();
     
-        if (line == NULL || strlen(line) == 0 || strspn(line, " \t\r\n") == strlen(line)) {
+        // bos satir kontrolu yapilir
+        if (line == NULL || strlen(line) == 0 || strspn(line, " \v\f\t\r\n") == strlen(line)) {
             status = 1;
         }
 
+        // line bize fonksiyondan geliyor ve bu !! yanina bir girdi girilirse son degere ekstra parametre olarak gecer
+        // ornek echo "ege", !! merhaba -> echo "ege" merhaba (calistirilan func) -> ege merhaba (output) ve bunu history e ekler
+        // ama suan sadece direk ilk iki karakter !! ise calisiyor degistirilcek
         else if (strcmp(line, "!!") == 0) {
             if (hist->rear != NULL) {
 
-                char *real_command = strdup(hist->rear->command);        
+                char *rear_command = custom_strndup(hist->rear->command, strlen(hist->rear->command));   
+                int   line_len     = strlen(rear_command); // \0 haric karakter sayisini doner
 
-                int linelen = strlen(real_command);
-                node_t *historynode = (node_t *)malloc(sizeof(node_t));
-                historynode->command = malloc(sizeof(char) * (linelen + 1));
-                strcpy(historynode->command, real_command);
-                historynode->next = NULL;
+                hist_node_t *history_node = (hist_node_t *)malloc(sizeof(hist_node_t));
+
+                history_node->command = malloc(sizeof(char) * (line_len + 1));
+                strcpy(history_node->command, rear_command);
+                history_node->next = NULL;
         
                 if (hist->front == NULL && hist->rear == NULL) {
-                    hist->front = historynode;
-                    hist->rear = historynode;
-                    hist_count++;
+                    hist->front = history_node;
+                    hist->rear = history_node;
+                    hist_count += 1;
                 } else {
-                    hist->rear->next = historynode;
-                    hist->rear = historynode;
-                    hist_count++;
+                    hist->rear->next = history_node;
+                    hist->rear = history_node;
+                    hist_count += 1;
                 }
-                printf("%s\n",real_command);
+                printf("%s\n",rear_command);
 
-                char **prev_args = esh_split_line(real_command);
-                status = esh_execute(prev_args);
+                char **prev_args = esh_split_line(rear_command);
+                status           = esh_execute(prev_args, builtin_str);
         
-                free(real_command);
+                free(rear_command);
                 free(prev_args);
+
             } else {
-                fprintf(stderr, "esh: no previous command found\n");
+                // zaten ilk basta olmaz bir tek ilk komut yazdigin anda hem rear hem frontda tanimlanir
+                fprintf(stderr, "[esh] no previous command found\n");
                 status = 1;
             }
         }
         else {
             int linelen = strlen(line);
 
-            node_t *historynode = (node_t *)malloc(sizeof(node_t));
-            historynode->command = malloc(sizeof(char) * (linelen + 1));
+            hist_node_t *history_node = (hist_node_t *)malloc(sizeof(hist_node_t));
+            history_node->command = malloc(sizeof(char) * (linelen + 1));
 
-            strcpy(historynode->command, line);
-            historynode->next = NULL;
+            strcpy(history_node->command, line);
+            history_node->next = NULL;
     
             if (hist->front == NULL && hist->rear == NULL) {
-                hist->front = historynode;
-                hist->rear = historynode;
+                hist->front = history_node;
+                hist->rear = history_node;
                 hist_count++;
             } else {
-                hist->rear->next = historynode;
-                hist->rear = historynode;
+                hist->rear->next = history_node;
+                hist->rear = history_node;
                 hist_count++;
             }
     
             args = esh_split_line(line);
-            status = esh_execute(args);
+            status = esh_execute(args, builtin_str);
             free(args);
         }
 
@@ -116,10 +133,11 @@ char *esh_read_line(void) {
     int c, position = 0;
     char *buffer = malloc(sizeof(char) * bufsiz);
 
-    if (buffer == NULL) {
-        fprintf(stderr, "esh: line buffer allocation error\n");
+    if (!buffer) {
+        fprintf(stderr, "[esh] line buffer allocation error\n");
         exit(EXIT_FAILURE);
     }
+
     while (1) {
         c = getchar();
         if (c == EOF || c == '\n') {
@@ -127,13 +145,15 @@ char *esh_read_line(void) {
             return buffer;
         } else {
             buffer[position] = c; 
-        } position ++; 
+        } 
+        
+        position ++; 
 
         if (position >= bufsiz) {
             bufsiz += 1024;
-            buffer = realloc(buffer, bufsiz); 
+            buffer  = realloc(buffer, bufsiz); 
             if (!buffer) {
-                fprintf(stderr, "esh: line buffer allocation error\n");
+                fprintf(stderr, "[esh] line buffer allocation error\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -143,262 +163,84 @@ char *esh_read_line(void) {
 char **esh_split_line(char *line) {
     char **val = shell_parser(line);
 
-    // printf("tokens :\n");
-    // for (int i = 0; val[i] != NULL; i++) {
-    //     printf("  [%d]: '%s'\n", i, val[i]);
-    // }
+    #ifdef DEBUG
+    printf("tokens :\n");
+    for (int i = 0; val[i] != NULL; i++) {
+        printf("  [%d]: '%s'\n", i, val[i]);
+    }
+    #endif
 
     return val;
 }
 
 int esh_launch(char **args) {
-    pid_t pid;
     int status;
+
+    pid_t pid;
+    // parent process'de cocugun pid degeri doner gercek 12345 gibi, fakat child process icinde 0 olur.
     pid = fork();
 
-    if (pid == 0) {
-        setpgid(0, 0);// pgid process group id demek ve bu child processi esh nin olduğu gruptan alır kendi grubunu açar ve lider yapar   
-        signal(SIGINT, SIG_DFL);           
+    // calistirilacak komut icin child process olusturulur 
+    if (pid == 0) { 
+        // normalde child process parent ile ayni grupta olur ama bu fonk sayesinde kendi grubunun patronu haline gelir
+        setpgid(0, 0);   
+
+        // biz parent process icin ctrl + c yi ignore etmistik burda onu child icin default haline getiriyoruz
+        signal(SIGINT, SIG_DFL);      
+
+        // getpid fg olmasini istedigimiz process id, stdin_fileno is terminalin file descriptoru
+        // ctrl + c, ctrl + z direk child process'e gider artik
         tcsetpgrp(STDIN_FILENO, getpid());    
+
+        /*
+        execvp - eger fail olur ise return eder fakat eger basarili olursa args[0] programi calisir.
+        child processin tum memory space silinir ve args[0] verileri yuklenir. pid degismez ama icerik
+        degisir. args[0] bittigi an kernel artik child process i zombie durumuna alir. kalan kod calismaz
+        */
         execvp(args[0], args);
-        perror("esh");
+
+        perror("[esh] ");
         exit(EXIT_FAILURE);
     } 
+
     else if (pid < 0) {
-        perror("esh");
+        perror("[esh] ");
         return 1;
     } 
+
+    // > 0 ise parent process
     else {
+        // bu cagiri process id si pid olan processin grup idsini de pid yap demek yani child kendi grubunun lideri olur
         setpgid(pid, pid);                    
+
+        // kullanici ne yazarsa sadece child process'e gider ve child etkilenir sadece.
         tcsetpgrp(STDIN_FILENO, pid);         
+
+        /*
+        ctrl + c -> terminal foreground process grouptaki tum processlere SIGINT (Interrupt) sinyalini gonderir
+                    default davranis: process hemen sonlanir (terminate).
+        ---
+        ctrl + z -> terminal foreground process grouptaki tum processlere SIGTSTP (Terminal Stop) sinyalini gonderir
+                    default davranis: process durur (stopped state) ama olmez.
+        */
+
+        // parent child process'i izler, status bilgisi &status adresine yazilir , WUNTRACED -> child stopped olsa bile bana haber ver
+        // WIFEXITED, WIFSIGNALED, WIFSTOPPED bu sayede bu fonksiyonlari kullanabilirsin ve sebebi gorursun parametre olarak status alir
         waitpid(pid, &status, WUNTRACED);     
+
+        // terminalin foreground ownerini bu grup yapar
         tcsetpgrp(STDIN_FILENO, getpgrp());  
 
         // suspend olduysa devam ettir (bazı durumlar için)x
         if (WIFSTOPPED(status)) {
+
+            // fonksitonu ismine gore yargilama amaci sinyali gondermektir ikinci parametredeki 
             kill(pid, SIGCONT);
+
+            // normalde buraya jobs gibi durdurma islemi yapmam lazim ama bizde yapmiyorum ileride eklicem
         }
     }
     return 1;
-}
-
-
-char *getcwd_path(void) {
-    size_t size = 1024;
-    char *buffer = (char *)malloc(size);
-
-    const char *fallback = "unknown";
-
-    if (!buffer) {
-        fprintf(stderr, "buffer alloc error for getcwd\n");
-
-        return strdup(fallback); 
-    } else {
-        if (getcwd(buffer, size) == NULL) {
-            fprintf(stderr, "buffer alloc error for getcwd\n");
-            return strdup(fallback);
-        }
-        return buffer;
-    }
-}
-
-char *builtin_str[] = {
-    "cd",
-    "help",
-    "exit",
-    "builtins",
-    "history"
-};
-
-char *builtin_help[] = {
-    "cd - takes 1 argument and it is the path you can use '.', '..', '~', ''(i mean no second arg)",
-    "help - help or help <builtin> only 1 argument",
-    "exit - closes the shell",
-    "builtins - shows all the builtins",
-    "history <num> -> optional - displays the last <num> commands executed succsesfully. if num not given it will print only 10"
-};
-  
-int esh_cd(char **args) {
-    const char *target_dir = "."; 
-
-    int arg_count = 0;
-    while (args[arg_count] != NULL) {
-        arg_count++;
-    }
-    if (arg_count > 2) {
-        fprintf(stderr, "esh: too many arguments\n");
-        return 1;
-    }
-
-    if (args[1] == NULL) {
-        target_dir = "."; 
-    } 
-    else if (strcmp(args[1], "~") == 0) {
-        char *home = getenv("HOME");
-        if (home == NULL) {
-            fprintf(stderr, "esh: home environment variable not set.\n");
-            return 1;
-        }
-        target_dir = home;
-    }
-    else {
-        target_dir = args[1]; 
-    }
-
-    if (chdir(target_dir) != 0) {
-        perror("esh");
-    }
-
-    return 1;
-}
-
-int esh_help(char **args) {
-
-    int arg_count = 0;
-    while (args[arg_count] != NULL) {
-        arg_count++;
-    }
-
-    if (arg_count == 1) {
-        int i;
-        printf("ege's shell - esh\n");
-        printf("a basic shell implementation in c by ege cagan kantar");
-        
-        printf("manual for builtins: help 'builtin'\n");
-        printf("help for other functions: man <function>\n");
-        printf("show built ins: <builtins>\n");
-
-    } else if (arg_count == 2) {
-        char *funcname = args[1];
-        int found = 0;
-
-        for (int i = 0; i < builtin_num(); i++) {
-            if (strcmp(funcname, builtin_str[i]) == 0) {
-                printf("%s\n", builtin_help[i]);
-                found = 1;
-                break;
-            }
-        }
-
-        if (!found) {
-            fprintf(stderr, "esh: no help available for '%s'\n", funcname);
-            printf("try man <command>\n");
-        }
-    } else {
-        fprintf(stderr, "esh: too many arguments\n");
-        return 1;
-    }
-  
-    return 1;
-}
-
-int esh_builtins(char **args) {
-    int arg_count = 0;
-    while (args[arg_count] != NULL) {
-        arg_count++;
-    }
-
-    if (arg_count > 1 || strcmp(args[0], "builtins") != 0) {
-        fprintf(stderr, "esh: wrong usage of command\n");
-        printf("correct usage: builtins\n");
-        return 1;
-    }
-
-    printf("built-in's:\n");
-    for (int i = 0; i < builtin_num(); i++) {
-        printf(" - %s\n", builtin_str[i]);
-    }
-    return 1;
-}
-
-int esh_history(char **args) {
-    if (hist == NULL || hist->front == NULL) {
-        printf("history is empty.\n");
-        return 1;
-    }
-    int arg_count = 0;
-    while (args[arg_count] != NULL) {
-        arg_count++;
-    }
-    if (arg_count == 1) {
-        int start_index = hist_count > 10 ? hist_count - 10 : 0;
-        int current_index = 0;
-        int print_index = hist_count > 10 ? hist_count - 10 + 1 : 1;
-
-        node_t *cmd = hist->front;
-
-        while (cmd != NULL) {
-            if (current_index >= start_index && cmd->next != NULL) {
-                printf("%d - %s\n", print_index, cmd->command);
-                print_index++;
-            }
-            cmd = cmd->next;
-            current_index++;
-        }
-
-        return 1;
-    } 
-
-    else if (arg_count == 2) {
-        int num;
-        if (isnumeric(args[1])) {
-            num = atoi(args[1]);
-    
-            if (num <= 0) {
-                fprintf(stderr, "esh: history argument must be a positive integer\n");
-                return 1;
-            }
-    
-            if (num > hist_count) {
-                fprintf(stderr, "given num is bigger than hist size last 10 given\n");
-                num = 10; 
-            }
-    
-            int skip_last = 1; 
-            int visible_count = hist_count - skip_last;
-    
-            if (num > visible_count) {
-                num = visible_count;
-            }
-    
-            int start_index = visible_count - num + 1;
-            int current_index = 1;
-    
-            node_t *cmd = hist->front;
-    
-            while (cmd != NULL) {
-                if (current_index >= start_index && cmd->next != NULL) {
-                    printf("%d - %s\n", current_index, cmd->command);
-                }
-    
-                cmd = cmd->next;
-                current_index++;
-            }
-            return 1;
-        } 
-        else {
-            fprintf(stderr, "esh: history takes an integer\n");
-            return 1;
-            }
-        } 
-    else {
-        fprintf(stderr, "wrong usage correct way either only history or history <num>\n");
-        return 1;
-    }   
-}
-
-int esh_exit(char **args) {
-    node_t *cmd = hist->front;
-
-    while (cmd != NULL) {
-        node_t *next = cmd->next;
-        free(cmd->command);  
-        free(cmd);          
-        cmd = next;         
-    }
-
-    free(hist);  
-    return 0;   
 }
 
 // bu decleration array of function pointers which take char ** as parameter and return int demektir.
@@ -410,11 +252,8 @@ int (*builtin_func[]) (char **) = {
     &esh_history
 };
 
-int builtin_num(void) {
-    return sizeof(builtin_str) / sizeof(char *);
-}
 
-int esh_execute(char **args) {
+int esh_execute(char **args, char **builtin_str) {
     int i;
 
     if (args[0] == NULL) {

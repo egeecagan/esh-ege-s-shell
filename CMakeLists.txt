@@ -5,9 +5,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out)
 set(CMAKE_C_STANDARD 99)
 
 set(SOURCES
+    src/builtin_functions.c
+    src/getters.c
     src/main.c
     src/esh.c
-    src/extras.c
+    src/internal_functions.c
 )
 
 add_executable(esh ${SOURCES})
